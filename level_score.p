@@ -18,8 +18,20 @@ def get_tier(score):
     else:
         return "Gold"
 
-def compute_level_score(role, features, base_score, population_samples,
-                        inactivity_days=0, inconsistent=False):
+def update_level_score(role, features, population_samples,
+                       prev_level_score=0,
+                       inactivity_days=0,
+                       inconsistent=False,
+                       months_active=1,
+                       growth_rate=0.3,
+                       max_monthly_gain=150):
+    """
+    Update level score month by month.
+    Starts from 0 at account creation, increases with activity,
+    decreases with inactivity or inconsistency.
+    """
+
+    # ---- Step 1: Calculate R_raw by role ----
     if role == "driver":
         L = features["login_rate"]
         S = streak_score(features["streak_days"], 14)
@@ -52,24 +64,39 @@ def compute_level_score(role, features, base_score, population_samples,
     else:
         raise ValueError("Invalid role")
 
+    # ---- Step 2: Calculate potential monthly gain ----
     R_pct = percentile_rank(R_raw, population_samples["R_raw_values"])
-    level_points = 50 * R_pct
-    initial_score = min(1000, max(0, base_score + level_points))
-    initial_tier = get_tier(initial_score)
+    monthly_gain = 1000 * R_pct * growth_rate
+    monthly_gain = min(monthly_gain, max_monthly_gain)  # cap growth
 
-    decay = inactivity_days * 5
+    # ---- Step 3: Apply streak reward ----
+    streak_bonus = 0
+    if months_active % 3 == 0 and inactivity_days == 0 and not inconsistent:
+        streak_bonus = 20
+
+    # ---- Step 4: Update score ----
+    new_score = prev_level_score + monthly_gain + streak_bonus
+
+    # ---- Step 5: Apply penalties ----
+    penalty = 0
+    if inactivity_days > 0:
+        penalty += int(100 * (1 - math.exp(-inactivity_days / 30)))  # exponential penalty
     if inconsistent:
-        decay += 20
+        penalty += 30
+    new_score -= penalty
 
-    final_score = max(0, initial_score - decay)
-    final_tier = get_tier(final_score)
+    # ---- Step 6: Clamp score between 0–1000 ----
+    new_score = max(0, min(1000, new_score))
+
+    # ---- Step 7: Tier ----
+    tier = get_tier(new_score)
 
     return {
-        "initial_level_score": initial_score,
-        "initial_tier": initial_tier,
-        "decay": decay,
-        "final_score": final_score,
-        "final_tier": final_tier,
-        "inactivity_days": inactivity_days,
-        "inconsistency": inconsistent
+        "prev_level_score": round(prev_level_score, 2),
+        "monthly_gain": round(monthly_gain, 2),
+        "streak_bonus": streak_bonus,
+        "penalty": penalty,
+        "final_level_score": round(new_score, 2),
+        "tier": tier,
+        "log": f"+{monthly_gain} gain, +{streak_bonus} bonus, -{penalty} penalty"
     }
