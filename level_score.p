@@ -1,14 +1,21 @@
 import math
 
+# ---------------- Utility Functions ---------------- #
+
 def percentile_rank(value, population):
+    """Calculate percentile rank of value within population."""
+    if not population:
+        return 0
     less = sum(1 for x in population if x < value)
     equal = sum(1 for x in population if x == value)
     return (less + 0.5 * equal) / len(population)
 
 def streak_score(streak_days, tau):
+    """Exponential growth for streaks."""
     return 1 - math.exp(-streak_days / tau)
 
 def get_tier(score):
+    """Map score to tier."""
     if score <= 250:
         return "Bronze"
     elif score <= 500:
@@ -19,17 +26,19 @@ def get_tier(score):
         return "Gold"
 
 def apply_fairness(score, tier, inactivity_days, inconsistent_days, was_active=True):
-    """Apply fairness rules: scaled penalties + consistency bonus."""
-    # Base penalties
+    """Apply penalties & fairness rules."""
     penalty = 0
+
+    # Penalty grows with inactivity
     if inactivity_days > 0:
         penalty += int(100 * (1 - math.exp(-inactivity_days / 30)))
+    # Flat penalty for inconsistency
     if inconsistent_days > 0:
         penalty += 30
 
-    # Scale penalties by tier fairness
+    # Scale penalty by tier fairness
     tier_penalty_factor = {
-        "Bronze": 0.5,
+        "Bronze": 0.5,   # lower protection
         "Amber": 0.75,
         "Ruby": 1.0,
         "Gold": 1.0
@@ -39,7 +48,7 @@ def apply_fairness(score, tier, inactivity_days, inconsistent_days, was_active=T
     # Apply penalty
     score_after_penalty = max(0, score - penalty)
 
-    # Consistency bonus
+    # Reward consistency
     consistency_bonus = 0
     if was_active and inconsistent_days == 0 and inactivity_days == 0:
         consistency_bonus = 20
@@ -47,25 +56,29 @@ def apply_fairness(score, tier, inactivity_days, inconsistent_days, was_active=T
 
     return score_after_penalty, penalty, consistency_bonus
 
-def update_level_score(role, features, population_samples,
+
+# ---------------- Main Function ---------------- #
+
+def update_level_score(user_data, population_samples,
                        prev_level_score=0,
-                       inactivity_days=0,
-                       inconsistent_days=0,
                        months_active=1,
                        growth_rate=0.3,
                        max_monthly_gain=150,
-                       first_time_account=True,
-                       worked_in_company_before=False,
                        weight_boost=0.4):
     """
     Updates user level score month by month with fairness.
+    user_data: dict containing role, features, inactivity info, and account flags.
+    population_samples: dict with population stats for percentile calculation.
     """
+
+    role = user_data["role"]
+    features = user_data["features"]
 
     # ---- Step 1: Calculate R_raw by role ----
     if role == "driver":
         L = features["login_rate"]
         S = streak_score(features["streak_days"], 14)
-        V = min(percentile_rank(features["rides_30d"], population_samples["rides_30d"]), 0.8)  # volume cap
+        V = min(percentile_rank(features["rides_30d"], population_samples["rides_30d"]), 0.8)
         OT = percentile_rank(features["on_time_rate"], population_samples["on_time_rate"])
         CR = 1 - percentile_rank(features["cancellation_rate"], population_samples["cancellation_rate"])
         R = percentile_rank(features["rating"], population_samples["rating"])
@@ -103,7 +116,10 @@ def update_level_score(role, features, population_samples,
     initial_score = prev_level_score + monthly_gain
     initial_tier = get_tier(initial_score)
 
-    # ---- Step 4: Apply fairness (penalty + consistency bonus) ----
+    # ---- Step 4: Apply fairness ----
+    inactivity_days = user_data.get("inactivity_days", 0)
+    inconsistent_days = user_data.get("inconsistent_days", 0)
+
     score_after_penalty, penalty, consistency_bonus = apply_fairness(
         initial_score, initial_tier, inactivity_days, inconsistent_days, was_active=True
     )
@@ -111,7 +127,7 @@ def update_level_score(role, features, population_samples,
     # ---- Step 5: One-time initial boost ----
     boost_applied = 0
     boost_used = False
-    if months_active == 1 and first_time_account and worked_in_company_before:
+    if months_active == 1 and user_data.get("first_time_account", True) and user_data.get("worked_in_company_before", False):
         raw_boost = 100
         boost_applied = raw_boost * weight_boost
         boost_used = True
@@ -120,9 +136,9 @@ def update_level_score(role, features, population_samples,
     final_score = min(1000, score_after_penalty + boost_applied)
     final_tier = get_tier(final_score)
 
-    # ---- Step 7: Output ----
+    # ---- Step 7: Return JSON-like response ----
     return {
-        "inconsistent_days": inconsistent_days,
+        "month": months_active,
         "initial_score": round(initial_score, 2),
         "penalty": penalty,
         "score_after_penalty": round(score_after_penalty, 2),
@@ -134,3 +150,43 @@ def update_level_score(role, features, population_samples,
         "reason_log": f"+{round(monthly_gain,2)} gain, -{penalty} penalty, "
                       f"+{consistency_bonus} consistency, +{boost_applied} boost"
     }
+
+
+# ---------------- Example Usage ---------------- #
+
+if __name__ == "__main__":
+    # Example population samples (company-wide stats)
+    population_samples = {
+        "rides_30d": [50, 120, 200, 300],
+        "deliveries_30d": [40, 100, 180, 250],
+        "goods_sold_30d": [10, 50, 100, 150],
+        "on_time_rate": [0.85, 0.9, 0.95],
+        "cancellation_rate": [0.1, 0.07, 0.05],
+        "failed_deliveries_rate": [0.1, 0.05, 0.02],
+        "job_acceptance_rate": [0.7, 0.85, 0.95],
+        "fulfilment_rate": [0.7, 0.85, 0.95],
+        "refund_rate": [0.1, 0.05, 0.02],
+        "avg_order_value": [100, 200, 300, 400],
+        "rating": [4.0, 4.5, 4.7, 4.9],
+        "R_raw_values": [0.4, 0.5, 0.6, 0.7]
+    }
+
+    # Example user data (dynamic from DB in production)
+    user_data = {
+        "role": "driver",
+        "features": {
+            "login_rate": 0.9,
+            "streak_days": 10,
+            "rides_30d": 120,
+            "on_time_rate": 0.95,
+            "cancellation_rate": 0.05,
+            "rating": 4.7
+        },
+        "inactivity_days": 5,
+        "inconsistent_days": 2,
+        "first_time_account": True,
+        "worked_in_company_before": True
+    }
+
+    result = update_level_score(user_data, population_samples, prev_level_score=0, months_active=1)
+    print(result)
