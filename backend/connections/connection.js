@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-// Maximum number of connection attempts
+// Maximum number 
 const MAX_RETRIES = 3;
 let retryCount = 0;
 
