@@ -107,7 +107,9 @@ def compute_level_score_backend(user_profile, population_samples, month_active, 
     # ---------------- Hybrid Spam/Anomaly Detection ---------------- #
     detector = HybridSpamDetector()
     spam_score = detector.predict_hybrid_score(user_profile)
-    is_spam = spam_score > 0.7  # threshold
+    SPAM_THRESHOLD = 0.7
+    is_spam = spam_score > SPAM_THRESHOLD
+    # threshold
     if is_spam:
         score_after, applied_penalty = apply_spam_penalty(score_after, score_after, spam_score)
         reason_log_spam = f", ⚠️ flagged spam (penalty {applied_penalty})"
