@@ -1,11 +1,14 @@
 from flask import Flask, request, jsonify
 from level_score import compute_level_score_backend
+import logging
+logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
 
 @app.route("/check_score", methods=["POST"])
 def check_score():
     data = request.json
+    logging.info(f"Received data: {data}")
     user_id = data.get("user_id")
     user_profile = data.get("user_profile")
     month_active = data.get("month_active",1)
