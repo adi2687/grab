@@ -1,5 +1,6 @@
 from ml_model_module import predict_with_error
 from utils import percentile_rank, get_tier, apply_fairness, compute_days, detailed_activity_analysis, ROLE_FEATURE_WEIGHTS, ROLE_BOOSTS
+from initial_boosts import get_boost_for_user
 
 def compute_level_score_backend(user_profile, population_samples, month_active, history_scores=[]):
     role = user_profile.get("role","driver")
@@ -54,7 +55,10 @@ def compute_level_score_backend(user_profile, population_samples, month_active, 
 
     score_after, penalty, consistency_bonus = apply_fairness(initial_score,tier,inactivity_days,inconsistent_days)
 
-    boost = 0
+    # ---------------- LINK Initial Boost from Pandas ---------------- #
+    boost = get_boost_for_user(user_profile.get("user_id",0))
+
+    # Add role-specific boosts
     if month_active==1 and user_profile.get("first_time_account",True):
         boost += ROLE_BOOSTS[role]["first_time"]
 
