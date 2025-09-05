@@ -59,9 +59,10 @@ company_preferences = {
 boost_results = calculate_initial_boosts(df, company_preferences)
 
 def get_boost_for_user(user_id):
-    row = boost_results[boost_results["UserID"]==user_id]
+    row = boost_results[boost_results["UserID"].astype(str) == str(user_id)]
     if not row.empty:
         return row.iloc[0]["InitialBoost"]
     return 0
+
 
 __all__ = ["boost_results", "get_boost_for_user"]
