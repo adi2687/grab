@@ -1,88 +1,80 @@
-# level_score_module.py
-
-import math
-import numpy as np
 from ml_model_module import predict_with_error
+from utils import percentile_rank, get_tier, apply_fairness, compute_days, detailed_activity_analysis, ROLE_FEATURE_WEIGHTS, ROLE_BOOSTS
 
-# ---------------- Utility Functions ---------------- #
-def percentile_rank(value, population):
-    if not population: return 0
-    less = sum(1 for x in population if x < value)
-    equal = sum(1 for x in population if x == value)
-    return (less + 0.5*equal)/len(population)
-
-def get_tier(score):
-    if score <= 250: return "Bronze"
-    elif score <= 500: return "Amber"
-    elif score <= 750: return "Ruby"
-    else: return "Gold"
-
-def apply_fairness(score, tier, inactivity_days, inconsistent_days):
-    penalty = int(100*(1 - math.exp(-inactivity_days/30))) if inactivity_days else 0
-    if inconsistent_days: penalty += 30
-    tier_factor = {"Bronze":0.5,"Amber":0.75,"Ruby":1.0,"Gold":1.0}
-    penalty = int(penalty * tier_factor[tier])
-    score_after = max(0, score - penalty)
-    bonus = 20 if inactivity_days==0 and inconsistent_days==0 else 0
-    score_after = min(1000, score_after + bonus)
-    return score_after, penalty, bonus
-
-def compute_days(activity_log, max_inactivity_gap=7):
-    inconsistent_days = sum(1 for day in activity_log if not day["active"])
-    inactivity_days = 0
-    gap = 0
-    for day in activity_log:
-        if not day["active"]:
-            gap += 1
-        else:
-            if gap > max_inactivity_gap: inactivity_days += gap
-            gap = 0
-    if gap > max_inactivity_gap: inactivity_days += gap
-    return inconsistent_days, inactivity_days
-
-# ---------------- Main Level Score Function ---------------- #
 def compute_level_score_backend(user_profile, population_samples, month_active, history_scores=[]):
+    role = user_profile.get("role","driver")
     features = user_profile["features"]
 
-    # Predict raw ML score with error margin
-    R_raw, pred_error = predict_with_error([
-        features["login_rate"], 
-        features["streak_days"],
-        features.get("rides_30d", 0),
-        features.get("on_time_rate", 0),
-        features.get("cancellation_rate", 0),
-        features["rating"]
-    ])
+    # Role-specific feature vectors
+    if role=="driver":
+        features_list=[
+            features["login_rate"],features["streak_days"],features.get("rides_30d",0),
+            features.get("on_time_rate",0),features.get("cancellation_rate",0),features["rating"],
+            features.get("avg_ride_distance",0),features.get("peak_hour_rides",0),
+            features.get("late_pickup_rate",0),features.get("customer_complaints",0),
+            features.get("ratings_std",0),features.get("total_hours_worked",0)
+        ]
+    elif role=="merchant":
+        features_list=[
+            features["login_rate"],features["streak_days"],features.get("sales_30d",0),
+            features.get("order_fulfillment_rate",0),features.get("return_rate",0),features["rating"],
+            features.get("avg_order_value",0),features.get("peak_hour_sales",0),
+            features.get("complaints_received",0),features.get("new_customers_acquired",0),
+            features.get("repeat_customer_rate",0),features.get("total_hours_operated",0)
+        ]
+    elif role=="delivery_partner":
+        features_list=[
+            features["login_rate"],features["streak_days"],features.get("deliveries_30d",0),
+            features.get("on_time_delivery_rate",0),features.get("cancellation_rate",0),features["rating"],
+            features.get("avg_delivery_distance",0),features.get("peak_hour_deliveries",0),
+            features.get("late_delivery_rate",0),features.get("customer_complaints",0),
+            features.get("ratings_std",0),features.get("total_hours_worked",0)
+        ]
+    else:
+        features_list = [features.get(k,0) for k in features]
 
-    R_raw /= 1000  # normalize
-    percentile = percentile_rank(R_raw, population_samples.get("R_raw_values", []))
+    weights = ROLE_FEATURE_WEIGHTS.get(role,[1]*len(features_list))
+    weighted_features = [f*w for f,w in zip(features_list, weights)]
 
-    base_gain = 1000 * percentile * 0.15
-    gain = min(base_gain * (0.5 + 0.05*month_active), 80)
+    R_raw, pred_error = predict_with_error(weighted_features)
+    R_raw /= 1000
+    percentile = percentile_rank(R_raw, population_samples.get("R_raw_values",[]))
 
+    base_gain = 1000*percentile*0.15
+    gain = min(base_gain*(0.5+0.05*month_active),80)
     prev_score = history_scores[-1] if history_scores else 0
-    initial_score = prev_score + gain
-    tier = get_tier(initial_score)
+    trend_penalty=0
+    if len(history_scores)>1 and (prev_score-history_scores[-2])<-20: trend_penalty=10
+    initial_score = prev_score + gain - trend_penalty
 
-    activity_log = user_profile.get("activity_log", [])
-    inconsistent_days, inactivity_days = compute_days(activity_log)
+    tier = get_tier(initial_score,role)
+    activity_log=user_profile.get("activity_log",[])
+    inconsistent_days,inactivity_days = compute_days(activity_log)
+    avg_streak,max_streak = detailed_activity_analysis(activity_log)
 
-    score_after, penalty, bonus = apply_fairness(initial_score, tier, inactivity_days, inconsistent_days)
+    score_after, penalty, consistency_bonus = apply_fairness(initial_score,tier,inactivity_days,inconsistent_days)
 
     boost = 0
-    if month_active == 1 and user_profile.get("first_time_account", True) and user_profile.get("worked_in_company_before", False):
-        boost = 40  # fixed 40 boost
+    if month_active==1 and user_profile.get("first_time_account",True):
+        boost += ROLE_BOOSTS[role]["first_time"]
 
-    final_score = min(1000, score_after + boost)
+    if role=="driver" and features.get("rides_30d",0)>100: boost+=ROLE_BOOSTS[role]["milestone_rides"]
+    elif role=="merchant" and features.get("sales_30d",0)>100: boost+=ROLE_BOOSTS[role]["high_sales"]
+    elif role=="delivery_partner" and features.get("deliveries_30d",0)>100: boost+=ROLE_BOOSTS[role]["milestone_deliveries"]
+
+    final_score = min(1000,score_after+boost)
+    reason_log=f"+{round(gain,2)} gain, -{penalty} penalty, +{consistency_bonus} consistency, +{boost} boost, ±{pred_error} model error"
 
     return {
-        "final_score": round(final_score, 2),
-        "tier": get_tier(final_score),
+        "final_score": round(final_score,2),
+        "tier": get_tier(final_score,role),
         "penalty": penalty,
-        "consistency_bonus": bonus,
+        "consistency_bonus": consistency_bonus,
         "boost": boost,
         "inconsistent_days": inconsistent_days,
         "inactivity_days": inactivity_days,
+        "avg_inactive_streak": avg_streak,
+        "max_inactive_streak": max_streak,
         "ml_prediction_error_margin": pred_error,
-        "reason_log": f"+{round(gain,2)} gain, -{penalty} penalty, +{bonus} consistency, +{boost} boost, ±{pred_error} model error"
+        "reason_log": reason_log
     }
