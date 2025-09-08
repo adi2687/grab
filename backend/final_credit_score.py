@@ -1,5 +1,7 @@
 import numpy as np
 import logging
+from level_score import compute_level_score_backend
+
 
 # ---------------- Logging Setup ---------------- #
 # Sets up logging to capture warnings and errors, saving them to a file
@@ -60,7 +62,7 @@ def normalize_feature(value, feature_name):
     """
     try:
         if not isinstance(value, (int, float)):
-            logging.warning(f"Feature '{feature_name}' has invalid type '{type(value)._name_}', using default 0")
+            logging.warning(f"Feature '{feature_name}' has invalid type '{type(value).__name__}', using default 0")
             value = 0
 
         # Note: In a production system, these normalization ceilings (e.g., 100.0) would
@@ -150,7 +152,14 @@ def compute_final_credit_score(user_profile, population_samples,
             raise ValueError(f"Invalid tier '{tier}'")
 
         # --- 1. Role Component (Individual Performance) ---
-        role_score = compute_role_score(user_profile)
+        level_result = compute_level_score_backend(
+        user_profile,
+        population_samples={"R_raw_values": []},  # pass real samples if available
+        month_active=user_profile.get("month_active", 1),
+        history_scores=user_profile.get("history_scores", [])
+        )
+
+        role_score = level_result["final_score"]
 
         # Add extra behavioral factors
         B = user_profile.get("behavior_score", 0.5)
@@ -166,7 +175,7 @@ def compute_final_credit_score(user_profile, population_samples,
                 elif factor_name == "demand_score": D = 0.5
 
         numerator = role_score + EXTRA_WEIGHTS["behavior_score"] * B * 100 + EXTRA_WEIGHTS["loyalty_score"] * L * 100 + EXTRA_WEIGHTS["demand_score"] * D * 100
-        denominator = sum(abs(w) for w in ROLE_WEIGHTS[role]["weights"]) + sum(EXTRA_WEIGHTS.values())
+        denominator = (sum(abs(w) for w in ROLE_WEIGHTS[role]["weights"])+ sum(v * 100 for v in EXTRA_WEIGHTS.values()))
         role_component = numerator / denominator if denominator != 0 else 50
 
         # --- 2. Global Component (Peer Performance) ---
@@ -202,7 +211,7 @@ def compute_final_credit_score(user_profile, population_samples,
         return {"final_score": 0, "error": str(e)}
 
 # ---------------- Example Usage ---------------- #
-if _name_ == "_main_":
+if __name__ == "__main__":
     # Example user profile
     user = {
         "id": "user123",
