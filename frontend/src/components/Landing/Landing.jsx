@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import './landing.css'
 // CSS Styles
-
-
+import Login from '../Login/Login';
+import { useNavigate } from 'react-router-dom';
 // Animated Background Component
 const AnimatedBackground = () => {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
@@ -21,14 +21,14 @@ const AnimatedBackground = () => {
 
   return (
     <div className="background">
-      <div 
-        className="gradient-circle-1" 
+      <div
+        className="gradient-circle-1"
         style={{
           transform: `translate(calc(-50% + ${mousePosition.x}px), calc(-50% + ${mousePosition.y}px))`
         }}
       />
-      <div 
-        className="gradient-circle-2" 
+      <div
+        className="gradient-circle-2"
         style={{
           transform: `translate(calc(-50% + ${-mousePosition.x}px), calc(-50% + ${-mousePosition.y}px))`
         }}
@@ -57,6 +57,8 @@ const Navbar = () => {
     }
   };
 
+
+const navigate = useNavigate();
   return (
     <nav className={`navbar ${scrolled ? 'scrolled' : ''}`}>
       <div className="nav-container">
@@ -67,7 +69,7 @@ const Navbar = () => {
           <button className="nav-link">Home</button>
           <button className="nav-link" onClick={() => scrollToSection('features')}>Features</button>
           <button className="nav-link">About</button>
-          <button className="btn btn-primary">Get Started</button>
+          <button className="btn btn-primary" onClick={() => navigate('/login')}>Login / Signup</button>
         </div>
       </div>
     </nav>
@@ -96,7 +98,7 @@ const Hero = () => {
               <span className="gradient-text">Grab</span> Your Financial Future
             </h1>
             <p className="hero-subtitle">
-              Take control of your finances with our powerful, AI-driven platform. 
+              Take control of your finances with our powerful, AI-driven platform.
               Get real-time insights and make smarter financial decisions.
             </p>
             <div className="hero-buttons">
@@ -161,7 +163,7 @@ const FeatureCard = ({ icon, title, description, delay }) => {
   }, [delay]);
 
   return (
-    <div 
+    <div
       ref={cardRef}
       className={`feature-card ${isVisible ? 'visible' : ''}`}
     >
@@ -219,7 +221,7 @@ const Features = () => {
         </div>
         <div className="features-grid">
           {features.map((feature, index) => (
-            <FeatureCard 
+            <FeatureCard
               key={index}
               icon={feature.icon}
               title={feature.title}
@@ -279,11 +281,11 @@ const Footer = () => {
             <h3 className="footer-links-title">Stay Updated</h3>
             <p>Subscribe to our newsletter for the latest updates.</p>
             <form className="newsletter-form" onSubmit={(e) => e.preventDefault()}>
-              <input 
-                type="email" 
-                placeholder="Enter your email" 
-                className="newsletter-input" 
-                required 
+              <input
+                type="email"
+                placeholder="Enter your email"
+                className="newsletter-input"
+                required
               />
               <button type="submit" className="btn btn-primary btn-sm">
                 Subscribe
@@ -304,8 +306,8 @@ const Footer = () => {
   );
 };
 
-const Landing=()=>{
-return (
+const Landing = () => {
+  return (
     <div className="app">
       <AnimatedBackground />
       <Navbar />

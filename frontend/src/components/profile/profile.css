@@ -1,0 +1,89 @@
+/* Profile.css */
+
+/* Page background */
+.profile-container {
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+    min-height: 100vh;
+    background: #f0f2f5; /* Facebook-like background */
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  }
+  
+  /* Profile card wrapper */
+  .profile-card {
+    background: #ffffff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    max-width: 700px;
+    width: 100%;
+  }
+  
+  /* Title */
+  .profile-card h2 {
+    font-size: 2rem;
+    font-weight: 600;
+    margin-bottom: 25px;
+    color: #1c1e21;
+    border-bottom: 2px solid #e4e6eb;
+    padding-bottom: 12px;
+  }
+  
+  /* User info list */
+  .profile-card p {
+    margin: 14px 0;
+    font-size: 1rem;
+    color: #050505;
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    border-radius: 8px;
+    background: #f9fafb;
+  }
+  
+  /* Label styling */
+  .profile-card strong {
+    min-width: 120px;
+    color: #1877f2; /* Facebook blue replaced with Grab green later */
+    font-weight: 600;
+  }
+  
+  /* Logout button */
+  .profile-card button {
+    margin-top: 25px;
+    padding: 12px 20px;
+    background: #2ecc71; /* Grab Green */
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.25s ease, transform 0.2s ease;
+  }
+  
+  .profile-card button:hover {
+    background: #27ae60;
+    transform: scale(1.03);
+  }
+  
+  /* Responsive for mobile */
+  @media (max-width: 768px) {
+    .profile-card {
+      padding: 20px;
+    }
+  
+    .profile-card h2 {
+      font-size: 1.6rem;
+    }
+  
+    .profile-card p {
+      font-size: 0.95rem;
+    }
+  
+    .profile-card strong {
+      min-width: 90px;
+    }
+  }
+  
