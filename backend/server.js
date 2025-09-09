@@ -6,6 +6,8 @@ import register from './Routes/register.js'
 import profile from './Routes/profile.js'
 import logout from './Routes/logout.js'
 import scores from './Routes/scores.js'
+import level from './Routes/level.js'
+import creditscore from './Routes/credit_score.js'
 import cors from 'cors'
 import cookieParser from "cookie-parser";
 const app = express();
@@ -40,4 +42,6 @@ app.use("/register", register)
 app.use("/profile", profile)
 app.use("/logout", logout)
 app.use("/api/scores", scores)
+app.use("/levelscore", level)
+app.use("/creditscore", creditscore)
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

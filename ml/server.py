@@ -6,6 +6,7 @@ import uvicorn
 from level_score import compute_level_score_backend
 from spam_detection import apply_spam_penalty
 from initial_boosts import get_boost_for_user
+from final_credit_score import compute_final_credit_score
 import numpy as np 
 def to_serializable(obj):
     if isinstance(obj, (np.int32, np.int64)):
@@ -37,7 +38,11 @@ class UserFeatures(BaseModel):
 class BoostRequest(BaseModel):
     user_id: str
     engagement_metrics: Dict[str, float]
+app = FastAPI()
 
+class credit_score(BaseModel):
+    user_profile: Dict[str, Any]
+    population_samples: List[Dict[str, Any]]
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
@@ -45,6 +50,7 @@ async def health_check():
 @app.post("/calculate-score")
 async def calculate_score(user_data: UserFeatures):
     try:
+        print(user_data)
         score_dict = compute_level_score_backend(
             user_profile={
                 "user_id": user_data.user_id,
@@ -57,22 +63,39 @@ async def calculate_score(user_data: UserFeatures):
             history_scores=user_data.history_scores
         )
 
-        final_score, credit_score = apply_spam_penalty(
-            final_score=float(score_dict["final_score"]),
-            credit_score=float(score_dict["final_score"]) * 0.9,
-            hybrid_score=float(score_dict["spam_score"]),
-        )
+        # final_score, credit_score = apply_spam_penalty(
+        #     final_score=float(score_dict["final_score"]),
+        #     credit_score=float(score_dict["final_score"]) * 0.9,
+        #     hybrid_score=float(score_dict["spam_score"]),
+        # )
+        # print('final_score',final_score)
+        # score_dict.update({
+        #     "user_id": user_data.user_id,
+        #     "final_score1": final_score,
+        #     "credit_score": credit_score,
+        #     "status": "success"
+        # })
 
-        score_dict.update({
-            "user_id": user_data.user_id,
-            "final_score": final_score,
-            "credit_score": credit_score,
-            "status": "success"
-        })
-
-        # 🔥 sanitize before returning
+        # # 🔥 sanitize before returning
         return to_serializable(score_dict)
 
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/get-credit-score")
+async def get_credit_score(request:credit_score):
+    try:
+        print("in the getcredit path")
+        score_dict = compute_final_credit_score(
+            user_profile=request.user_profile,
+            population_samples=request.population_samples,
+            delta_base=2.0,
+            lambda_r=0.7,
+            accept_rate=0.6,
+            target_accept=0.7,
+            eta=0.1
+        )
+        return to_serializable(score_dict)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -19,6 +19,16 @@ logging.basicConfig(
 
 # Role-based weights define the importance of different features for each user role.
 # This allows the model to be tailored to the specific activities of drivers, merchants, etc.
+# on_time_ratio=1-late_pickup_rate
+# avg_rating=rating 
+# rides_completed=rides_30d
+# complaints=customer_complaints
+
+# deliveries_complted=deleives_30d 
+# on_time_ratio=on_time_delivery_rate
+# customer_rating=rating 
+# issues=customer_complaints
+
 ROLE_WEIGHTS = {
     "driver": {
         "features": ["rides_completed", "avg_rating", "on_time_ratio", "complaints"],
@@ -31,11 +41,8 @@ ROLE_WEIGHTS = {
     "delivery": {
         "features": ["deliveries_completed", "on_time_ratio", "customer_rating", "issues"],
         "weights": [0.30, 0.25, 0.30, -0.15] # Issues negatively impact the score
-    },
-    "student": {
-        "features": ["assignments_submitted", "attendance", "peer_feedback", "grades"],
-        "weights": [0.25, 0.20, 0.25, 0.30]
     }
+    
 }
 
 # Tier multipliers reward higher-tier partners, providing a loyalty incentive.
@@ -163,7 +170,7 @@ def compute_final_credit_score(user_profile, population_samples,
 
         # Add extra behavioral factors
         B = user_profile.get("behavior_score", 0.5)
-        L = user_profile.get("loyalty_score", 0.5)
+        L = user_profile.get("loyalty_score", 0.5)  
         D = user_profile.get("demand_score", 0.5)
 
         # Validate extra factors are between 0 and 1
@@ -196,14 +203,14 @@ def compute_final_credit_score(user_profile, population_samples,
         final_score = np.clip(combined_score + delta_adj, 0, 100)
 
         return {
-            "role": role,
+            # "role": role,
             "tier": tier,
             "role_component": round(role_component, 2),
             "global_score": round(global_score, 2),
             "fairness_adj": round(adj_r, 2),
             "combined_score": round(combined_score, 2),
             "delta_adj": round(delta_adj, 2),
-            "final_score": round(final_score, 2)
+            "final_score": round(final_score, 2)*10
         }
 
     except Exception as e:
@@ -223,7 +230,7 @@ if __name__ == "__main__":
         "behavior_score": 0.7, 
         "loyalty_score": 0.6, 
         "demand_score": 0.8,
-        "tier": "Gold"
+        "tier": "Ruby"
     }
     
     # Example population for peer comparison

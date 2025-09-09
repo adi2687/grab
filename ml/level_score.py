@@ -12,6 +12,7 @@ import numpy as np
 spam_detector = HybridSpamDetector()
 
 def compute_level_score_backend(user_profile, population_samples, month_active, history_scores=[]):
+    print('user_profile',user_profile)
     role = user_profile.get("role", "driver")
     features = user_profile.get("features", {})
 
@@ -46,7 +47,7 @@ def compute_level_score_backend(user_profile, population_samples, month_active, 
             features.get("repeat_customer_rate", 0),
             features.get("total_hours_operated", 0)
         ]
-    elif role == "delivery_partner":
+    elif role == "delivery":
         features_list = [
             features.get("login_rate", 0),
             features.get("streak_days", 0),
@@ -134,7 +135,7 @@ def compute_level_score_backend(user_profile, population_samples, month_active, 
         f"+{round(gain,2)} gain, -{penalty} penalty, +{consistency_bonus} consistency, "
         f"+{boost} boost, ±{pred_error} model error"
     )
-
+# final score is the level score
     return {
         "final_score": round(final_score, 2),
         "tier": get_tier(final_score, role),
