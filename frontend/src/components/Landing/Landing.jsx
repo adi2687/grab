@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import './landing.css'
 // CSS Styles
-import Login from '../Login/Login';
+import Login from '../Login/Login'
+import logo from '../../../public/logo.png';
 import { useNavigate } from 'react-router-dom';
 // Animated Background Component
 const AnimatedBackground = () => {
@@ -63,7 +64,7 @@ const navigate = useNavigate();
     <nav className={`navbar ${scrolled ? 'scrolled' : ''}`}>
       <div className="nav-container">
         <div className="logo">
-          <span className="gradient-text">Grab</span>
+          <img src={logo} alt="" />
         </div>
         <div className="nav-links">
           <button className="nav-link">Home</button>
@@ -112,16 +113,16 @@ const Hero = () => {
             </div>
             <div className="hero-stats">
               <div className="stat">
-                <div className="stat-number">10K+</div>
-                <div className="stat-label">Active Users</div>
+                <div className="stat-number">74%+</div>
+                <div className="stat-label">market share</div>
               </div>
               <div className="stat">
-                <div className="stat-number">99.9%</div>
-                <div className="stat-label">Uptime</div>
+                <div className="stat-number">23%</div>
+                <div className="stat-label">Year on year Growth</div>
               </div>
               <div className="stat">
-                <div className="stat-number">24/7</div>
-                <div className="stat-label">Support</div>
+                <div className="stat-number">42M+</div>
+                <div className="stat-label">Monthly transaction</div>
               </div>
             </div>
           </div>
