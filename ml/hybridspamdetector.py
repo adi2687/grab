@@ -20,7 +20,7 @@ class HybridSpamDetector:
             if not pd.api.types.is_numeric_dtype(df[col]):
                 df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
         return True
-
+ 
     def train_supervised(self, df):
         self.validate_features(df)
         X = df[self.required_features]

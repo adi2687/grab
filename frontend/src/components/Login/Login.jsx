@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState,useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Login.css";
 
@@ -24,21 +24,54 @@ const Login = () => {
 
   // login
   const handleLogin = async () => {
-    const response = await fetch(`${apiurl}/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-      credentials: "include"
-    });
-    const data = await response.json();
-    if (data.token) {
-      localStorage.setItem("logintoken", data.token);
-      navigate("/profile");
-    } else {
-      alert(data.message || "Login failed");
+    try {
+      const response = await fetch(`${apiurl}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+        credentials: "include"
+      });
+  
+      const data = await response.json();
+      console.log("Login response:", data);
+  
+      // Adjust key depending on backend (token OR authToken OR jwt)
+      const token = data.token || data.authToken || null;
+  
+      if (!token) {
+        alert(data.message || "Login failed");
+        return;
+      }
+  
+      // Save token
+      localStorage.setItem("logintoken", token);
+  
+      // 🔹 Now call daily login check right after storing token
+      const dailyRes = await fetch(`${apiurl}/daily`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({}),
+        credentials: "include"
+      });
+  
+      const dailyData = await dailyRes.json();
+      console.log("Daily response:", dailyData);
+  
+      if (dailyData.success) {
+        navigate("/profile");
+      } else {
+        alert("Spam detected");
+      }
+  
+    } catch (err) {
+      console.error("Error during login:", err);
+      alert("Something went wrong. Please try again.");
     }
   };
-
+  
   // register
   const handleRegister = async () => {
     if (age < 18) {

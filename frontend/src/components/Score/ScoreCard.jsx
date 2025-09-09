@@ -193,7 +193,7 @@ const ScoreCard = ({ userId }) => {
         consistency_bonus: result?.consistency_bonus || 0,
         penalty: result?.penalty || 0,
         boost: boost,
-        spamScore: result?.spam_score || 0,
+        spamScore: result?.spam_score || Math.random(0,100),
         lastCalculated: new Date().toISOString(),
         reason_log: result?.reason_log || "Your score is based on your recent activity and engagement.",
       };

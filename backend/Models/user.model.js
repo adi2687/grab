@@ -53,8 +53,8 @@ const userSchema = new mongoose.Schema({
     // Platform Specific
     grabId: { type: Number, unique: true, sparse: true },
     isActive: { type: Boolean, default: true },
-    lastLogin: { type: Date },
-    
+    last_checkin: { type: Date },
+    loginstreak: { type: Array, default: [] },
 }, { timestamps: true });
 
 // Indexes for faster queries

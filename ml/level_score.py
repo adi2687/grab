@@ -83,7 +83,7 @@ def compute_level_score_backend(user_profile, population_samples, month_active, 
     if len(history_scores) > 1 and (prev_score - history_scores[-2]) < -20:
         trend_penalty = 10
     initial_score = prev_score + gain - trend_penalty
-
+ 
     # ---------------- Activity analysis ----------------
     tier = get_tier(initial_score, role)
     print('here got the tier',tier)

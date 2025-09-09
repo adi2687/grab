@@ -1,2 +1,2 @@
-let a=5.45
-console.log(Math.round(a*100)/100)
+const currentTime = Math.floor(Date.now() / 1000) 
+console.log(currentTime)

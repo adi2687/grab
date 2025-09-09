@@ -76,7 +76,7 @@ router.get("/", verifyToken, async (req, res) => {
                     complaints: d.complaints
                 }));
         }
-
+        
         const apiurlpy = process.env.API_URL_PY || "http://localhost:5000";
         const response = await fetch(`${apiurlpy}/get-credit-score`, {
             method: "POST",
