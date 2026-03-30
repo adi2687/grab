@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaUserCircle } from "react-icons/fa";   // ✅ Profile Icon
-import './Profile.css';
+import './profile.css';
 import ScoreCard from "../Score/ScoreCard";
 
 const Profile = () => {
